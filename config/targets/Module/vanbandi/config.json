@@ -1,0 +1,8 @@
+{
+  "module": "vanbandi",
+  "path": "D:\\DataSync\\config\\targets\\Module\\vanbandi\\",
+  "targets": [
+    { "order": 1, "file": "Module\\vanbandi\\target-bang1.json" },
+    { "order": 2, "file": "Module\\vanbandi\\target-bang2.json" }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "module": "adafsd",
+  "description": "",
+  "createdAt": "2026-02-21T21:41:20.322Z",
+  "runSequential": true,
+  "targets": [
+    {
+      "order": 1,
+      "file": "Module\\adafsd\\nhanvien.json",
+      "notes": "Target nhanvien.json"
+    }
+  ]
+}

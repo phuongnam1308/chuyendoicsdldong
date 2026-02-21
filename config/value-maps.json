@@ -1,0 +1,24 @@
+{
+  "statusMap": {
+    "Mới": 0,
+    "Hoạt động": 1,
+    "Đã xóa": 2,
+    "moi": 0,
+    "active": 1
+  },
+  "genderMap": {
+    "Nam": "M",
+    "Nữ": "F",
+    "Khác": "O",
+    "male": "M",
+    "female": "F"
+  }
+  ,
+  "roleMap": {
+    "Admin": 1,
+    "Quản trị": 1,
+    "User": 2,
+    "Người dùng": 2,
+    "Guest": 3
+  }
+}

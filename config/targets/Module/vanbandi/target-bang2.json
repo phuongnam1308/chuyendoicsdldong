@@ -1,0 +1,9 @@
+{
+  "nguon": { "table": "BangNguon2" },
+  "dich": { "table": "BangDich2" },
+  "options": {
+    "batchSize": 500,
+    "logDir": "logs"
+  },
+  "logFile": "logs/history_target-bang2.json"
+}

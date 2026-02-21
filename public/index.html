@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DataSync — Bảng điều khiển</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;600;700&display=swap');
+
+    :root {
+      --bg:       #060b14;
+      --surface:  #0c1525;
+      --panel:    #0f1d30;
+      --border:   rgba(56,139,253,0.12);
+      --border2:  rgba(255,255,255,0.05);
+      --text:     #ccd6f6;
+      --muted:    #607090;
+      --accent:   #38bdf8;
+      --accent2:  #818cf8;
+      --green:    #34d399;
+      --red:      #f87171;
+      --yellow:   #fbbf24;
+      --glow:     rgba(56,189,248,0.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Sora', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none; z-index: 0;
+    }
+
+    .wrap { position: relative; z-index: 1; max-width: 1380px; margin: 0 auto; padding: 28px 24px 60px; }
+
+    /* HEADER */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 32px; padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap; gap: 12px;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: 20px; box-shadow: 0 0 20px var(--glow);
+    }
+    .logo-text h1 { font-size: 18px; font-weight: 700; color: #e6f1ff; letter-spacing: -.3px; }
+    .logo-text p  { font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .conn-badge {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 20px;
+      background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25);
+      font-size: 12px; color: var(--green); font-family: 'JetBrains Mono', monospace;
+      transition: all 0.3s;
+    }
+    .conn-badge.error {
+      background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.25); color: var(--red);
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    .dot.red { background: var(--red); animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+
+    /* LAYOUT: 2 cột — sidebar modules + main content */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* ═══ SIDEBAR (MODULE TREE) ═══════════════════════════════════════ */
+    .sidebar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      position: sticky;
+      top: 20px;
+    }
+    .sidebar-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,0.02);
+    }
+    .sidebar-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+    .sidebar-body { padding: 10px 8px; max-height: calc(100vh - 260px); overflow-y: auto; }
+    .sidebar-body::-webkit-scrollbar { width: 4px; }
+    .sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Module folder node */
+    .mod-node { margin-bottom: 4px; }
+    .mod-folder {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; border-radius: 8px; cursor: pointer;
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .mod-folder:hover { background: rgba(56,189,248,0.07); }
+    .mod-folder.active { background: rgba(56,189,248,0.12); }
+    .folder-icon { font-size: 14px; transition: transform 0.2s; }
+    .folder-icon.open { transform: rotate(0deg); }
+    .folder-arrow { font-size: 10px; color: var(--muted); margin-left: auto; transition: transform 0.2s; }
+    .folder-arrow.open { transform: rotate(90deg); }
+    .mod-folder-name { font-size: 13px; font-weight: 600; color: #e6f1ff; flex: 1; }
+    .mod-folder-count { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
+      background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 10px; }
+    .mod-folder-status { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    .mod-folder-status.running { background: var(--accent); animation: pulse 1s infinite; }
+    .mod-folder-status.done    { background: var(--green); }
+    .mod-folder-status.error   { background: var(--red); }
+
+    /* Target leaf node */
+    .mod-targets { padding-left: 14px; overflow: hidden; }
+    .mod-target {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 6px; cursor: pointer;
+      transition: background 0.15s;
+      border-left: 2px solid transparent;
+    }
+    .mod-target:hover { background: rgba(255,255,255,0.04); }
+    .mod-target.selected { background: rgba(56,189,248,0.1); border-left-color: var(--accent); }
+    .target-icon { font-size: 11px; color: var(--muted); }
+    .target-name { font-size: 12px; color: var(--text); flex: 1; font-family: 'JetBrains Mono', monospace; }
+    .target-pill-sm {
+      font-size: 9px; padding: 2px 6px; border-radius: 10px; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
+    }
+    .tpill-idle    { background: rgba(96,112,144,0.15); color: var(--muted); }
+    .tpill-running { background: rgba(56,189,248,0.15); color: var(--accent); animation: blink .8s step-end infinite; }
+    .tpill-done    { background: rgba(52,211,153,0.12); color: var(--green); }
+    .tpill-error   { background: rgba(248,113,113,0.12); color: var(--red); }
+
+    /* Module actions in sidebar */
+    .mod-folder-actions {
+      display: flex; gap: 6px; padding: 8px 10px;
+      border-top: 1px solid var(--border2);
+    }
+
+    /* ═══ MAIN CONTENT ════════════════════════════════════════════════ */
+    .main-content { display: flex; flex-direction: column; gap: 20px; }
+
+    /* STATS */
+    .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 6px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .stat-card:hover { border-color: rgba(56,189,248,0.3); box-shadow: 0 0 20px rgba(56,189,248,0.05); }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-family: 'JetBrains Mono', monospace; }
+    .stat-val {
+      font-size: 26px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+      background: linear-gradient(135deg, #e6f1ff, var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-val.green { background: linear-gradient(135deg, #a7f3d0, var(--green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-val.red   { background: linear-gradient(135deg, #fecaca, var(--red));   -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-val.yellow{ background: linear-gradient(135deg, #fde68a, var(--yellow));-webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-sub { font-size: 11px; color: var(--muted); }
+
+    /* MODULE PANEL (khi chọn module trong sidebar) */
+    .module-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+    }
+    .module-panel-head {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, rgba(56,189,248,0.06), rgba(129,140,248,0.04));
+      border-bottom: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .module-panel-info .module-path {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 4px;
+    }
+    .module-panel-info .module-title { font-size: 18px; font-weight: 700; color: #e6f1ff; }
+    .module-panel-info .module-sub   { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .module-panel-actions { display: flex; gap: 10px; align-items: center; }
+
+    /* CONFIG DISPLAY */
+    .config-box {
+      background: #040a12; border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 16px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--muted); line-height: 1.7; max-height: 140px; overflow-y: auto;
+    }
+    .config-box::-webkit-scrollbar { width: 4px; }
+    .config-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .cfg-key   { color: var(--accent2); }
+    .cfg-str   { color: var(--green); }
+    .cfg-num   { color: var(--yellow); }
+    .cfg-bool  { color: var(--accent); }
+    .cfg-arr   { color: var(--muted); }
+
+    /* TARGET CARDS GRID */
+    .targets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; padding: 16px; }
+    .module-card {
+      background: var(--panel); border: 1px solid var(--border2);
+      border-radius: 12px; overflow: hidden;
+      transition: border-color .25s, box-shadow .25s;
+      display: flex; flex-direction: column;
+    }
+    .module-card:hover { border-color: rgba(56,189,248,0.2); }
+    .module-card.is-running { border-color: rgba(56,189,248,0.4); box-shadow: 0 0 20px rgba(56,189,248,0.08); }
+    .module-card.is-done    { border-color: rgba(52,211,153,0.3); }
+    .module-card.is-error   { border-color: rgba(248,113,113,0.3); }
+
+    .module-head {
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--border2);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+    }
+    .module-head-left { flex: 1; min-width: 0; }
+    .module-seq { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 3px; }
+    .module-name  { font-weight: 600; font-size: 14px; color: #e6f1ff; }
+    .module-route { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .module-file  { font-size: 10px; color: rgba(56,189,248,0.6); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+    .module-winpath {
+      font-size: 9px; color: rgba(96,112,144,0.5); font-family: 'JetBrains Mono', monospace;
+      margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .status-pill { font-size: 11px; font-family: 'JetBrains Mono', monospace; padding: 3px 10px; border-radius: 20px; font-weight: 600; flex-shrink: 0; }
+    .pill-idle    { background: rgba(96,112,144,0.15); color: var(--muted); border: 1px solid rgba(96,112,144,0.2); }
+    .pill-running { background: rgba(56,189,248,0.12); color: var(--accent); border: 1px solid rgba(56,189,248,0.3); animation: blink .8s step-end infinite; }
+    .pill-done    { background: rgba(52,211,153,0.1);  color: var(--green);  border: 1px solid rgba(52,211,153,0.3); }
+    .pill-error   { background: rgba(248,113,113,0.1); color: var(--red);    border: 1px solid rgba(248,113,113,0.3); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .module-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+    /* PROGRESS */
+    .progress-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .progress-label { font-size: 11px; color: var(--muted); }
+    .progress-nums  { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); font-weight: 600; }
+    .progress-pct   { font-size: 11px; color: var(--muted); margin-left: 4px; }
+
+    .track { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; }
+    .bar {
+      height: 100%; border-radius: 100px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0%; transition: width .5s cubic-bezier(.4,0,.2,1); position: relative;
+    }
+    .bar.done  { background: linear-gradient(90deg,#34d399,#10b981); }
+    .bar.error { background: linear-gradient(90deg,#f87171,#ef4444); }
+    .bar.shimmer::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg,transparent 0%,rgba(255,255,255,.2) 50%,transparent 100%);
+      animation: shimmer 1.2s infinite;
+    }
+    @keyframes shimmer { from{transform:translateX(-100%)} to{transform:translateX(300%)} }
+
+    /* PERF ROW */
+    .perf-row { display: flex; gap: 8px; }
+    .perf-item { flex:1; background: rgba(255,255,255,0.03); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 8px; }
+    .perf-key { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; font-family: 'JetBrains Mono', monospace; }
+    .perf-val { font-size: 13px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: #e6f1ff; margin-top: 2px; }
+
+    /* Stats tiny */
+    .stats-row { display: flex; gap: 6px; }
+    .stat-tiny { flex: 1; background: rgba(255,255,255,0.02); border-radius: 5px; padding: 4px 7px; font-size: 10px; color: var(--muted); display: flex; justify-content: space-between; }
+    .stat-tiny b { font-family: 'JetBrains Mono', monospace; color: var(--text); }
+    .stat-tiny.ins b { color: var(--green); }
+    .stat-tiny.upd b { color: var(--accent); }
+    .stat-tiny.skip b { color: var(--muted); opacity: 0.7; }
+
+    /* MODULE FOOTER */
+    .module-footer { padding: 0 14px 12px; display: flex; gap: 6px; }
+    .btn {
+      padding: 7px 14px; border-radius: 8px; border: 0;
+      font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 5px;
+    }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+    .btn-primary { background: linear-gradient(135deg,#0ea5e9,var(--accent2)); color: #fff; box-shadow: 0 0 14px rgba(56,189,248,.2); }
+    .btn-primary:hover { box-shadow: 0 0 22px rgba(56,189,248,.4); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity:.4; cursor:default; transform:none; box-shadow:none; }
+    .btn-ghost { background: rgba(255,255,255,.04); color: var(--muted); border: 1px solid var(--border2); }
+    .btn-ghost:hover { background: rgba(255,255,255,.08); color: var(--text); }
+    .btn-ghost:disabled { opacity:.4; cursor:default; }
+    .btn-danger { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+    .btn-danger:hover { background: rgba(248,113,113,0.2); }
+    .btn-run-module {
+      background: linear-gradient(135deg, rgba(52,211,153,0.15), rgba(56,189,248,0.1));
+      color: var(--green); border: 1px solid rgba(52,211,153,0.3);
+      padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s; font-family: 'Sora', sans-serif;
+    }
+    .btn-run-module:hover { background: linear-gradient(135deg, rgba(52,211,153,0.25), rgba(56,189,248,0.15)); transform: translateY(-1px); }
+    .btn-run-module:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+    .spin { display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,.2); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* ADMIN ERROR */
+    .admin-error-wrap { display: none; border-top: 1px solid var(--border2); padding-top: 8px; margin-top: 4px; }
+    .admin-error-wrap.visible { display: block; }
+    .error-scroll { max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+    .error-item {
+      background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,113,.18);
+      border-radius: 6px; padding: 6px 8px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 6px;
+    }
+    .error-id     { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--red); font-weight:600; }
+    .error-msg    { font-size:11px; color:#fca5a5; margin-top:2px; }
+    .error-detail { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--muted); margin-top:2px; }
+    .btn-retry {
+      flex-shrink:0; padding:3px 8px; border-radius:5px;
+      border:1px solid rgba(248,113,113,.3); background:rgba(248,113,113,.1);
+      color:var(--red); font-size:10px; font-weight:600; cursor:pointer;
+      font-family:'Sora',sans-serif; transition:all .2s;
+    }
+    .btn-retry:hover { background:rgba(248,113,113,.2); }
+    .btn-retry.ok { border-color:rgba(52,211,153,.3); background:rgba(52,211,153,.1); color:var(--green); }
+
+    /* ADMIN BADGE */
+    .admin-badge {
+      display:flex; align-items:center; gap:6px;
+      padding:5px 12px; border-radius:20px;
+      background:rgba(251,191,36,.07); border:1px solid rgba(251,191,36,.2);
+      font-size:11px; color:var(--yellow); font-family:'JetBrains Mono',monospace;
+      cursor:pointer; user-select:none; transition:all .2s;
+    }
+    .admin-badge:hover  { background:rgba(251,191,36,.14); }
+    .admin-badge.active { background:rgba(251,191,36,.18); border-color:rgba(251,191,36,.5); }
+
+    /* LOG */
+    .log-wrap { }
+    .section-title {
+      font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+    .log-box {
+      background: #040a12; border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      max-height: 180px; overflow-y: auto; color: var(--muted); line-height: 1.8;
+    }
+    .log-box::-webkit-scrollbar { width:4px; }
+    .log-box::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+    .log-line { display:flex; gap:10px; }
+    .log-time { color:rgba(56,189,248,.5); flex-shrink:0; }
+    .log-text.ok   { color:var(--green); }
+    .log-text.err  { color:var(--red); }
+    .log-text.info { color:var(--text); }
+    .log-text.warn { color:var(--yellow); }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 200; display: flex;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-content {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; width: 90%; max-width: 520px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      animation: modal-in .3s cubic-bezier(.4,0,.2,1);
+    }
+    .modal-content.lg { max-width: 780px; }
+    @keyframes modal-in { from{opacity:0;transform:scale(.95)} to{opacity:1;transform:scale(1)} }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 20px; border-bottom: 1px solid var(--border2);
+    }
+    .modal-header h2 { font-size: 16px; font-weight: 600; }
+    .modal-close { background: none; border: none; font-size: 24px; color: var(--muted); cursor: pointer; transition: color .2s; line-height: 1; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .form-group label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .5px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 10px 12px; font-size: 13px;
+      background: var(--panel); border: 1px solid var(--border2);
+      border-radius: 8px; color: var(--text); font-family: 'Sora', sans-serif;
+      transition: border-color .2s;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+    .form-group select { cursor: pointer; }
+    .form-group select option { background: #0f1d30; }
+    .form-hint { font-size: 11px; color: var(--muted); margin-top: 4px; font-style: italic; }
+    .modal-footer {
+      padding: 14px 20px; border-top: 1px solid var(--border2);
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+
+    /* Config preview in modal */
+    .config-preview {
+      background: #040a12; border: 1px solid var(--border2);
+      border-radius: 8px; padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--muted); line-height: 1.8; max-height: 180px; overflow-y: auto;
+    }
+    .config-preview .key { color: var(--accent2); }
+    .config-preview .val { color: var(--green); }
+    .config-preview .num { color: var(--yellow); }
+    .config-preview .arr { color: #c9d1d9; }
+
+    /* Log modal */
+    .log-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+    .log-stat-box { background: var(--panel); padding: 10px; border-radius: 8px; border: 1px solid var(--border2); text-align: center; }
+    .log-stat-val { font-size: 18px; font-weight: 700; color: #e6f1ff; font-family: 'JetBrains Mono', monospace; }
+    .log-stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; margin-top: 3px; letter-spacing: 0.5px; }
+    .log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .log-table th { text-align: left; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 10px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+    .log-table td { padding: 8px 10px; border-bottom: 1px solid var(--border2); color: var(--text); vertical-align: top; }
+    .badge-err { background: rgba(248,113,113,0.15); color: var(--red); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+    .raw-json { background: #0d1117; padding: 14px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b949e; overflow-x: auto; white-space: pre-wrap; max-height: 280px; }
+
+    /* EMPTY / PLACEHOLDER */
+    .empty-state { text-align:center; padding:60px 20px; color:var(--muted); font-size:13px; }
+    .empty-icon  { font-size:40px; opacity:.2; margin-bottom:10px; }
+
+    /* Module run progress bar (overall) */
+    .module-run-progress {
+      background: var(--panel); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 12px 16px; margin-bottom: 2px;
+    }
+    .mrp-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .mrp-track { height: 4px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; }
+    .mrp-bar   { height: 100%; background: linear-gradient(90deg, var(--green), var(--accent)); border-radius: 100px; transition: width 0.4s; }
+
+    /* Run order badge */
+    .run-order {
+      font-size: 10px; font-family: 'JetBrains Mono', monospace;
+      color: var(--accent); background: rgba(56,189,248,0.1);
+      border: 1px solid rgba(56,189,248,0.2); border-radius: 4px;
+      padding: 1px 6px; margin-right: 4px;
+    }
+
+    @media (max-width:1100px) { .main-layout{grid-template-columns:1fr} .sidebar{position:static;} }
+    @media (max-width:640px) { .stats{grid-template-columns:repeat(2,1fr)} .targets-grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⇄</div>
+      <div class="logo-text">
+        <h1>DataSync</h1>
+        <p>Bảng điều khiển đồng bộ dữ liệu</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="conn-badge"><span class="dot"></span> Đang kết nối</div>
+      <div class="conn-badge" id="dbSourceStatus"><span class="dot red"></span> Nguồn: ...</div>
+      <div class="conn-badge" id="dbDestStatus"><span class="dot red"></span> Đích: ...</div>
+      <div class="admin-badge" id="adminToggle" onclick="toggleAdmin()">🔒 Admin</div>
+      <button class="btn btn-ghost" onclick="openCreateModuleModal()">📁 Tạo Module</button>
+      <button class="btn btn-primary" onclick="openCreateTargetModal()">+ Thêm Target</button>
+    </div>
+  </header>
+
+  <!-- LAYOUT: SIDEBAR + MAIN -->
+  <div class="main-layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-head">
+        <div class="sidebar-title">📂 Modules / Targets</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadModules()" title="Làm mới danh sách">↺</button>
+      </div>
+      <div class="sidebar-body" id="sidebarTree">
+        <div style="padding:20px; text-align:center; color:var(--muted); font-size:12px;">Đang tải...</div>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+      <!-- STATS -->
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-label">Tổng bản ghi</div>
+          <div class="stat-val" id="totalRecords">0</div>
+          <div class="stat-sub">Tất cả targets</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Đã đồng bộ</div>
+          <div class="stat-val green" id="totalDone">0</div>
+          <div class="stat-sub">Thành công</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Lỗi</div>
+          <div class="stat-val red" id="totalErr">0</div>
+          <div class="stat-sub">Cần xử lý</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Đang chạy</div>
+          <div class="stat-val yellow" id="totalRunning">0</div>
+          <div class="stat-sub">Targets active</div>
+        </div>
+      </div>
+
+      <!-- MODULE PANEL -->
+      <div id="modulePanelWrap">
+        <div class="module-panel">
+          <div style="padding:60px 20px; text-align:center; color:var(--muted);">
+            <div style="font-size:36px;opacity:.15;margin-bottom:10px;">📂</div>
+            <div style="font-size:13px;">Chọn một Module ở bên trái để xem và quản lý targets</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOG -->
+      <div class="log-wrap">
+        <div class="section-title">Nhật ký hoạt động</div>
+        <div class="log-box" id="logBox">
+          <div class="log-line"><span class="log-time">--:--:--</span><span class="log-text info">Hệ thống sẵn sàng.</span></div>
+        </div>
+      </div>
+
+    </div><!-- /main-content -->
+  </div><!-- /main-layout -->
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     MODAL: TẠO MODULE MỚI
+═══════════════════════════════════════════════════════════════════ -->
+<div id="modalCreateModule" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('modalCreateModule')">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📁 Tạo Module mới</h2>
+      <button class="modal-close" onclick="closeModal('modalCreateModule')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Tên Module (tên thư mục)</label>
+        <input type="text" id="newModuleName" placeholder="vd: vanbandi, nhanvien, tonkho..." />
+        <div class="form-hint">Không dấu, không khoảng trắng. Sẽ tạo thư mục tại: config/targets/Module/<b id="previewModPath">...</b>/</div>
+      </div>
+      <div class="form-group">
+        <label>Mô tả (tùy chọn)</label>
+        <input type="text" id="newModuleDesc" placeholder="Đồng bộ dữ liệu văn bản..." />
+      </div>
+      <div style="background: var(--panel); border-radius: 8px; padding: 12px 14px; border: 1px solid var(--border2);">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:8px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:.5px;">📋 Sẽ tạo tự động file config.json:</div>
+        <div class="config-preview" id="previewConfig">{ ... }</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalCreateModule')">Hủy</button>
+      <button id="btnSaveModule" class="btn btn-primary" onclick="saveNewModule()">📁 Tạo Module</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     MODAL: THÊM TARGET
+═══════════════════════════════════════════════════════════════════ -->
+<div id="modalCreateTarget" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('modalCreateTarget')">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>+ Thêm Target mới</h2>
+      <button class="modal-close" onclick="closeModal('modalCreateTarget')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Module (thư mục chứa) *</label>
+        <select id="targetModule" onchange="onTargetModuleChange()">
+          <option value="">— Chọn Module —</option>
+        </select>
+        <div class="form-hint">Target sẽ được lưu vào thư mục module đã chọn và tự động thêm vào config.json</div>
+      </div>
+      <div class="form-group">
+        <label>Tên file target *</label>
+        <input type="text" id="targetFileName" placeholder="vd: bang1, nhanvien_chinh..." onkeyup="updateTargetPreview()" />
+        <div class="form-hint">Không dấu, không khoảng trắng. Sẽ tạo file <b id="previewTargetFile">???.json</b></div>
+      </div>
+      <div class="form-group">
+        <label>Bảng nguồn (Source Table) *</label>
+        <input type="text" id="targetSourceTable" placeholder="vd: dbo.VANBANDI, schema.EMPLOYEES..." onkeyup="updateTargetPreview()" />
+      </div>
+      <div class="form-group">
+        <label>Bảng đích (Destination Table) *</label>
+        <input type="text" id="targetDestTable" placeholder="vd: dbo.VANBANDI_DST, schema.EMPLOYEES_DEST..." onkeyup="updateTargetPreview()" />
+      </div>
+      <div style="background: var(--panel); border-radius: 8px; padding: 10px 14px; border: 1px solid var(--border2);">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:6px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:.5px;">📋 Preview target JSON sẽ tạo:</div>
+        <div class="config-preview" id="previewTargetJson">{ ... }</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalCreateTarget')">Hủy</button>
+      <button id="btnSaveTarget" class="btn btn-primary" onclick="saveNewTarget()">+ Tạo Target</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     MODAL: XEM LOG CHI TIẾT
+═══════════════════════════════════════════════════════════════════ -->
+<div id="logModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('logModal')">
+  <div class="modal-content lg">
+    <div class="modal-header">
+      <h2 id="logModalTitle">Chi tiết log</h2>
+      <button class="modal-close" onclick="closeModal('logModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="logModalBody" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="toggleRawJson()">{ } Raw JSON</button>
+      <button class="btn btn-primary" onclick="closeModal('logModal')">Đóng</button>
+    </div>
+    <div id="rawJsonArea" style="display:none; padding:0 20px 20px;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     MODAL: XEM CONFIG MODULE
+═══════════════════════════════════════════════════════════════════ -->
+<div id="modalViewConfig" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal('modalViewConfig')">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="configModalTitle">config.json</h2>
+      <button class="modal-close" onclick="closeModal('modalViewConfig')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-hint" style="margin-bottom:8px;">File config này xác định thứ tự chạy các targets trong module. Có thể kéo thả để sắp xếp lại thứ tự (tính năng cần backend).</div>
+      <div class="raw-json" id="configJsonView" style="max-height:60vh;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('modalViewConfig')">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════════════
+let modules      = [];          // Danh sách tất cả targets
+let moduleGroups = {};          // { moduleName: { config, targets: [...] } }
+let selectedModule = null;      // Module đang xem trong panel
+const state      = {};          // Trạng thái runtime mỗi target
+let isAdmin      = false;
+let dbStatus     = { source: false, dest: false };
+
+// ══════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════════════════
+const fmt  = n  => Number(n).toLocaleString('vi-VN');
+const ts   = () => new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const slug = s  => s.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-_]/g,'');
+
+function log(text, cls = 'info') {
+  const box  = document.getElementById('logBox');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${ts()}</span><span class="log-text ${cls}">${text}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function label(m) { return m.displayName || m.fileName || m.file; }
+
+// ══════════════════════════════════════════════════════════════════════
+//  ADMIN
+// ══════════════════════════════════════════════════════════════════════
+function toggleAdmin() {
+  isAdmin = !isAdmin;
+  const b = document.getElementById('adminToggle');
+  b.classList.toggle('active', isAdmin);
+  b.innerHTML = isAdmin ? '🔓 Admin' : '🔒 Admin';
+  document.querySelectorAll('.admin-error-wrap').forEach(el => el.classList.toggle('visible', isAdmin));
+  log(isAdmin ? 'Chế độ Admin BẬT — hiển thị chi tiết lỗi' : 'Chế độ Admin TẮT');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  MODAL HELPERS
+// ══════════════════════════════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function openCreateModuleModal() {
+  document.getElementById('newModuleName').value = '';
+  document.getElementById('newModuleDesc').value = '';
+  document.getElementById('previewModPath').textContent = '...';
+  document.getElementById('previewConfig').innerHTML = '{ ... }';
+  openModal('modalCreateModule');
+}
+
+function openCreateTargetModal(preselectedModule = '') {
+  // Điền danh sách module vào select
+  const sel = document.getElementById('targetModule');
+  sel.innerHTML = '<option value="">— Chọn Module —</option>';
+  Object.keys(moduleGroups).sort().forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = `📂 ${name}`;
+    if (name === preselectedModule) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  document.getElementById('targetFileName').value   = '';
+  document.getElementById('targetSourceTable').value = '';
+  document.getElementById('targetDestTable').value   = '';
+  document.getElementById('previewTargetFile').textContent = '???.json';
+  document.getElementById('previewTargetJson').innerHTML = '{ ... }';
+  openModal('modalCreateTarget');
+  if (preselectedModule) onTargetModuleChange();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  PREVIEW HELPERS (live update khi gõ)
+// ══════════════════════════════════════════════════════════════════════
+document.addEventListener('input', function(e) {
+  if (e.target.id === 'newModuleName') {
+    const name = e.target.value.trim();
+    document.getElementById('previewModPath').textContent = name || '...';
+    updateModulePreviewConfig(name);
+  }
+});
+
+function updateModulePreviewConfig(name) {
+  const desc = document.getElementById('newModuleDesc')?.value || '';
+  if (!name) { document.getElementById('previewConfig').innerHTML = '{ ... }'; return; }
+  // Đây là nội dung file config.json sẽ được tạo tại:
+  // D:\DataSync\config\targets\Module\{name}\config.json
+  const cfg = {
+    module:        name,
+    description:   desc || `Đồng bộ module ${name}`,
+    createdAt:     new Date().toISOString().split('T')[0],
+    path:          `D:\\DataSync\\config\\targets\\Module\\${name}\\`,
+    runSequential: true,
+    targets:       []   // sẽ được tự động thêm vào khi tạo target
+  };
+  document.getElementById('previewConfig').innerHTML = syntaxHighlight(cfg);
+}
+
+function onTargetModuleChange() { updateTargetPreview(); }
+
+function updateTargetPreview() {
+  const mod  = document.getElementById('targetModule').value;
+  const name = document.getElementById('targetFileName').value.trim();
+  const src  = document.getElementById('targetSourceTable').value.trim();
+  const dst  = document.getElementById('targetDestTable').value.trim();
+  // Tên file: giữ nguyên input, chỉ thêm .json nếu chưa có
+  const safeFile = name ? (name.toLowerCase().endsWith('.json') ? name : `${name}.json`) : '???.json';
+  document.getElementById('previewTargetFile').textContent = safeFile;
+  if (!name) { document.getElementById('previewTargetJson').innerHTML = '{ ... }'; return; }
+  // Đường dẫn lưu file thực tế trên server
+  const filePath = mod ? `Module\\${mod}\\${safeFile}` : safeFile;
+  const winPath  = mod ? `D:\\DataSync\\config\\targets\\Module\\${mod}\\${safeFile}` : safeFile;
+  const obj = {
+    file:    filePath,
+    winPath: winPath,
+    notes:   `Target ${name}`,
+    nguon:   { table: src || 'dbo.TABLE_SRC' },
+    dich:    { table: dst || 'dbo.TABLE_DST' },
+    total:   0
+  };
+  document.getElementById('previewTargetJson').innerHTML = syntaxHighlight(obj);
+}
+
+function syntaxHighlight(obj) {
+  const s = JSON.stringify(obj, null, 2);
+  return s
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(m) {
+      let cls = 'num';
+      if (/^"/.test(m)) { cls = /:$/.test(m) ? 'key' : 'val'; }
+      else if (/true|false/.test(m)) { cls = 'num'; }
+      return `<span class="${cls}">${m}</span>`;
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  GLOBAL STATS
+// ══════════════════════════════════════════════════════════════════════
+function updateGlobalStats() {
+  let done = 0, err = 0, running = 0, total = 0;
+  modules.forEach(m => {
+    total += m.total || 0;
+    const s = state[m.id];
+    if (s) { done += s.processed; err += s.errors.length; if (s.status==='running') running++; }
+  });
+  document.getElementById('totalRecords').textContent = fmt(total);
+  document.getElementById('totalDone').textContent    = fmt(done);
+  document.getElementById('totalErr').textContent     = fmt(err);
+  document.getElementById('totalRunning').textContent = running;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  LOAD MODULES FROM API
+// ══════════════════════════════════════════════════════════════════════
+async function loadModules() {
+  try {
+    log('Đang tải danh sách modules và targets...');
+    const res = await fetch('/api/chuyendoi/targets');
+    if (!res.ok) throw new Error('Không thể tải targets từ server.');
+    const data = await res.json();
+
+    modules = [];
+    moduleGroups = {};
+
+    // 1. Khởi tạo nhóm từ danh sách moduleConfigs trước (để hiện cả module rỗng)
+    if (data.moduleConfigs) {
+      Object.keys(data.moduleConfigs).forEach(modName => {
+        moduleGroups[modName] = {
+          config: data.moduleConfigs[modName],
+          targets: []
+        };
+      });
+    }
+
+    // 2. Duyệt qua các targets và phân loại vào nhóm
+    (data.targets || []).forEach(t => {
+      // Chuẩn hóa dấu phân cách: đổi tất cả \ thành / để xử lý đồng nhất
+      // Ví dụ thực tế:
+      //   t.file = "Module\vanbandi\target-bang1.json"
+      //   t.file = "Module\Vanbanden\nguoidung.json"
+      const normalized = t.file.replace(/\\/g, '/');
+      const parts = normalized.split('/');
+
+      // Cấu trúc bắt buộc: Module / {TênModule} / {file.json}
+      //   parts[0] = "Module"  (chuỗi cố định, bỏ qua, không phân biệt hoa thường)
+      //   parts[1] = tên thư mục module, GIỮ NGUYÊN HOA THƯỜNG (vanbandi, Vanbanden...)
+      //   parts[2+] = tên file JSON (target-bang1.json, nguoidung.json...)
+      let modName  = '_root';
+      let fileName = normalized;
+      
+      // Backend trả về dạng "Module/TenModule/TenFile.json"
+      if (parts.length >= 3 && parts[0].toLowerCase().includes('module')) {
+        modName  = parts[1];                    // giữ đúng casing: vanbandi / Vanbanden
+        fileName = parts.slice(2).join('/');    // target-bang1.json / nguoidung.json
+      } else if (parts.length === 2) {
+        // Không có tiền tố "Module" — dùng parts[0] làm module, parts[1] làm file
+        modName  = parts[0];
+        fileName = parts[1];
+      }
+      // else: chỉ có 1 phần → _root, fileName = normalized (giữ nguyên)
+
+      // Đường dẫn Windows đầy đủ để hiển thị trên UI
+      const winPath = `D:\\DataSync\\config\\targets\\Module\\${modName}\\${fileName}`;
+
+      const m = {
+        id:          t.file,          // key duy nhất (đường dẫn gốc từ API)
+        file:        t.file,          // dùng khi gọi API start-run
+        module:      modName,         // "vanbandi" hoặc "Vanbanden" — đúng casing
+        fileName:    fileName,        // "target-bang1.json" / "nguoidung.json"
+        winPath:     winPath,         // hiển thị đường dẫn Windows đầy đủ
+        displayName: t.notes || fileName.replace(/\.json$/i, ''),
+        route:       `${t.nguon?.table||'?'} → ${t.dich?.table||'?'}`,
+        total:       t.total || 0,
+        runOrder:    t.runOrder || 0,
+      };
+
+      modules.push(m);
+
+      // Gom nhóm theo module
+      if (!moduleGroups[modName]) {
+        moduleGroups[modName] = {
+          config: data.moduleConfigs?.[modName] || {
+            module: modName,
+            runSequential: true,
+            targets: []
+          },
+          targets: []
+        };
+        // Fallback nếu module chưa có trong config (trường hợp file nằm ngoài root)
+        moduleGroups[modName] = { config: { module: modName }, targets: [] };
+      }
+      moduleGroups[modName].targets.push(m);
+
+      // Khởi tạo state nếu chưa có
+      if (!state[m.id]) {
+        state[m.id] = { status:'idle', processed:0, inserted:0, updated:0, skipped:0, errors:[], speed:0, startTime:null, intervalId:null };
+      }
+    });
+
+    // Sắp xếp targets trong mỗi module theo runOrder (thứ tự chạy trong config)
+    Object.values(moduleGroups).forEach(grp => {
+      grp.targets.sort((a,b) => (a.runOrder||0) - (b.runOrder||0));
+    });
+
+    renderSidebar();
+    if (selectedModule && moduleGroups[selectedModule]) {
+      renderModulePanel(selectedModule);
+    }
+    updateGlobalStats();
+    log(`Tải thành công: ${Object.keys(moduleGroups).length} modules, ${modules.length} targets.`, 'ok');
+  } catch(e) {
+    log(e.message, 'err');
+    document.getElementById('sidebarTree').innerHTML = 
+      `<div style="padding:16px; color:var(--red); font-size:12px;">⚠ ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RENDER SIDEBAR TREE
+// ══════════════════════════════════════════════════════════════════════
+function renderSidebar() {
+  const tree = document.getElementById('sidebarTree');
+  tree.innerHTML = '';
+
+  if (!Object.keys(moduleGroups).length) {
+    tree.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">
+      <div style="font-size:28px;opacity:.2;margin-bottom:8px;">📂</div>
+      Chưa có module nào.<br>Nhấn "Tạo Module" để bắt đầu.
+    </div>`;
+    return;
+  }
+
+  const sortedMods = Object.keys(moduleGroups).sort((a,b) => a==='_root'?1:(b==='_root'?-1:a.localeCompare(b)));
+
+  sortedMods.forEach(modName => {
+    const grp = moduleGroups[modName];
+    const isSelected = selectedModule === modName;
+    const modState = getModuleState(modName);
+
+    const node = document.createElement('div');
+    node.className = 'mod-node';
+    node.id = `sidebar_mod_${CSS.escape(modName)}`;
+
+    const folder = document.createElement('div');
+    folder.className = `mod-folder ${isSelected?'active':''}`;
+    folder.innerHTML = `
+      <div class="mod-folder-status ${modState}"></div>
+      <span class="folder-icon">📂</span>
+      <span class="mod-folder-name">${modName === '_root' ? '(Root)' : modName}</span>
+      <span class="mod-folder-count">${grp.targets.length}</span>
+      <span class="folder-arrow ${isSelected?'open':''}">▶</span>
+    `;
+    folder.onclick = () => selectModule(modName);
+    node.appendChild(folder);
+
+    // Target list (always visible when selected)
+    const targetList = document.createElement('div');
+    targetList.className = 'mod-targets';
+    targetList.id = `targets_${CSS.escape(modName)}`;
+    targetList.style.display = isSelected ? 'block' : 'none';
+
+    grp.targets.forEach((t, idx) => {
+      const s = state[t.id];
+      const st = s?.status || 'idle';
+      const pillMap = { idle:'tpill-idle', running:'tpill-running', done:'tpill-done', error:'tpill-error' };
+      const labelMap = { idle:'IDLE', running:'RUN', done:'DONE', error:'ERR' };
+      const item = document.createElement('div');
+      item.className = `mod-target`;
+      item.id = `stree_${t.id.replace(/[^a-zA-Z0-9]/g,'_')}`;
+      item.innerHTML = `
+        <span class="run-order">${idx+1}</span>
+        <span class="target-icon">📄</span>
+        <span class="target-name">${t.fileName}</span>
+        <span class="target-pill-sm ${pillMap[st]}" id="spill_${t.id.replace(/[^a-zA-Z0-9]/g,'_')}">${labelMap[st]}</span>
+      `;
+      item.onclick = (e) => { e.stopPropagation(); scrollToCard(t.id); };
+      targetList.appendChild(item);
+    });
+
+    node.appendChild(targetList);
+    tree.appendChild(node);
+  });
+}
+
+function getModuleState(modName) {
+  const targets = moduleGroups[modName]?.targets || [];
+  if (targets.some(t => state[t.id]?.status === 'running')) return 'running';
+  if (targets.every(t => state[t.id]?.status === 'done')) return targets.length ? 'done' : '';
+  if (targets.some(t => state[t.id]?.status === 'error')) return 'error';
+  return '';
+}
+
+function selectModule(modName) {
+  selectedModule = modName;
+  renderSidebar(); // Re-render để cập nhật selected state
+  renderModulePanel(modName);
+}
+
+function scrollToCard(targetId) {
+  const card = document.getElementById(`card_${CSS.escape(targetId)}`);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RENDER MODULE PANEL
+// ══════════════════════════════════════════════════════════════════════
+function renderModulePanel(modName) {
+  const grp = moduleGroups[modName];
+  if (!grp) return;
+
+  const wrap = document.getElementById('modulePanelWrap');
+  
+  const safeId  = modName.replace(/[^a-zA-Z0-9]/g,'_');
+  // Đường dẫn Windows đầy đủ tới thư mục module — giữ nguyên casing tên module
+  const modDir  = `D:\\DataSync\\config\\targets\\Module\\${modName}`;
+  const cfgPath = `${modDir}\\config.json`;
+
+  wrap.innerHTML = `
+    <div class="module-panel">
+      <div class="module-panel-head">
+        <div class="module-panel-info">
+          <div class="module-path">📂 ${modDir}\\</div>
+          <div class="module-title">📁 ${modName}</div>
+          <div class="module-sub">${grp.targets.length} target(s) · Chạy tuần tự theo <span style="color:var(--accent);font-family:'JetBrains Mono',monospace;">config.json</span></div>
+        </div>
+        <div class="module-panel-actions">
+          <button class="btn btn-ghost btn-sm" onclick="viewModuleConfig('${modName}')">📋 config.json</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCreateTargetModal('${modName}')">+ Target</button>
+          <button class="btn-run-module" id="btnRunMod_${safeId}" onclick="runModule('${modName}')">
+            ▶ Chạy Module
+          </button>
+        </div>
+      </div>
+
+      <!-- Overall module progress -->
+      <div style="padding: 14px 16px 0; display:none;" id="modProgress_${safeId}">
+        <div class="module-run-progress">
+          <div class="mrp-label">
+            <span id="modProgLabel_${safeId}">Tiến độ module</span>
+            <span id="modProgPct_${safeId}" style="color:var(--accent); font-family:'JetBrains Mono',monospace;">0%</span>
+          </div>
+          <div class="mrp-track"><div class="mrp-bar" id="modProgBar_${safeId}" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Config preview mini -->
+      <div style="padding: 12px 16px 0;">
+        <div style="font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px;">
+          📋 config.json — Thứ tự chạy:
+        </div>
+        <div class="config-box" id="configBox_${safeId}">
+          ${renderConfigPreview(grp)}
+        </div>
+      </div>
+
+      <!-- Target Cards Grid -->
+      <div class="targets-grid" id="targetsGrid_${safeId}">
+        ${grp.targets.map((t, idx) => buildTargetCard(t, idx)).join('')}
+      </div>
+    </div>
+  `;
+
+  // Cập nhật UI cho từng target
+  grp.targets.forEach(t => updateModuleUI(t.id));
+}
+
+function renderConfigPreview(grp) {
+  const modName = grp.config?.module || selectedModule;
+  const cfg = {
+    module: modName,
+    runSequential: true,
+    targets: grp.targets.map((t,i) => ({
+      order: i+1,
+      file:  `Module\\${modName}\\${t.fileName}`,
+      notes: t.displayName
+    }))
+  };
+  return `<code style="font-family:'JetBrains Mono',monospace;">${syntaxHighlight(cfg)}</code>`;
+}
+
+function buildTargetCard(m, idx) {
+  const safeId = m.id.replace(/[^a-zA-Z0-9]/g,'_');
+  return `
+    <div class="module-card" id="card_${CSS.escape(m.id)}">
+      <div class="module-head">
+        <div class="module-head-left">
+          <div class="module-seq">
+            <span class="run-order">#${idx+1}</span>
+            <span style="color:var(--muted); font-size:10px;">Thứ tự chạy trong config</span>
+          </div>
+          <div class="module-name">${label(m)}</div>
+          <div class="module-route">${m.route}</div>
+          <div class="module-file" title="${m.winPath}">📄 ${m.fileName}</div>
+          <div class="module-winpath" title="${m.winPath}">${m.winPath}</div>
+        </div>
+        <div class="status-pill pill-idle" id="pill_${safeId}">IDLE</div>
+      </div>
+      <div class="module-body">
+        <div>
+          <div class="progress-meta">
+            <span class="progress-label">Tiến độ xử lý</span>
+            <span>
+              <span class="progress-nums" id="pnums_${safeId}">0 / ${fmt(m.total||0)}</span>
+              <span class="progress-pct"  id="ppct_${safeId}">(0%)</span>
+            </span>
+          </div>
+          <div class="track"><div class="bar" id="bar_${safeId}"></div></div>
+        </div>
+        <div class="perf-row">
+          <div class="perf-item">
+            <div class="perf-key">Tốc độ</div>
+            <div class="perf-val" id="speed_${safeId}">—</div>
+          </div>
+          <div class="perf-item">
+            <div class="perf-key">Còn lại</div>
+            <div class="perf-val" id="eta_${safeId}">—</div>
+          </div>
+          <div class="perf-item">
+            <div class="perf-key">Đã xử lý</div>
+            <div class="perf-val" id="done_${safeId}">0</div>
+          </div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-tiny ins"><span>+Ins</span> <b id="ins_${safeId}">0</b></div>
+          <div class="stat-tiny upd"><span>~Upd</span> <b id="upd_${safeId}">0</b></div>
+          <div class="stat-tiny skip"><span>Skip</span> <b id="skip_${safeId}">0</b></div>
+        </div>
+        <!-- Admin error panel -->
+        <div class="admin-error-wrap ${isAdmin?'visible':''}" id="errWrap_${safeId}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:10px;color:var(--yellow);font-weight:600;font-family:'JetBrains Mono',monospace;">🔐 CHI TIẾT LỖI (ADMIN)</span>
+            <span style="font-size:10px;color:var(--red);font-family:'JetBrains Mono',monospace;" id="errtitle_${safeId}">0 lỗi</span>
+          </div>
+          <div class="error-scroll" id="errList_${safeId}"></div>
+        </div>
+      </div>
+      <div class="module-footer">
+        <button class="btn btn-primary btn-sm" id="btnSync_${safeId}" onclick="startSync('${m.id}')" ${(!dbStatus.source||!dbStatus.dest)?'disabled':''}>▶ Chạy</button>
+        <button class="btn btn-ghost btn-sm"   id="btnReset_${safeId}" onclick="resetTarget('${m.id}')" disabled>↺ Reset</button>
+        <button class="btn btn-ghost btn-sm"   onclick="viewHistory('${m.id}')">📜 Log</button>
+      </div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  UPDATE TARGET UI
+// ══════════════════════════════════════════════════════════════════════
+function updateModuleUI(id) {
+  const m = modules.find(x => x.id === id);
+  const s = state[id];
+  if (!m || !s) return;
+
+  const safeId = id.replace(/[^a-zA-Z0-9]/g,'_');
+  const total = m.total || 0;
+  const pct   = total > 0 ? Math.min(100, Math.round(s.processed/total*100)) : (s.status==='done'?100:0);
+  const el = eid => document.getElementById(`${eid}_${safeId}`);
+
+  if (el('pnums')) el('pnums').textContent = `${fmt(s.processed)} / ${fmt(total)}`;
+  if (el('ppct'))  el('ppct').textContent  = `(${pct}%)`;
+  if (el('done'))  el('done').textContent  = fmt(s.processed);
+  if (el('ins'))   el('ins').textContent   = fmt(s.inserted);
+  if (el('upd'))   el('upd').textContent   = fmt(s.updated);
+  if (el('skip'))  el('skip').textContent  = fmt(s.skipped);
+
+  const bar = el('bar');
+  if (bar) {
+    bar.style.width = pct+'%';
+    bar.className   = 'bar' + (s.status==='running'?' shimmer':'') + (s.status==='done'?' done':'') + (s.status==='error'?' error':'');
+  }
+
+  const pill = el('pill');
+  if (pill) {
+    const pm = {idle:'pill-idle',running:'pill-running',done:'pill-done',error:'pill-error'};
+    const pl = {idle:'IDLE',running:'ĐANG CHẠY',done:'HOÀN THÀNH',error:'CÓ LỖI'};
+    pill.className   = `status-pill ${pm[s.status]||'pill-idle'}`;
+    pill.textContent = pl[s.status]||'IDLE';
+  }
+
+  // Card border
+  const card = document.getElementById(`card_${CSS.escape(id)}`);
+  if (card) {
+    card.className = 'module-card' + (s.status==='running'?' is-running':'') + (s.status==='done'?' is-done':'') + (s.status==='error'?' is-error':'');
+  }
+
+  if (el('speed')) el('speed').textContent = s.status==='running' ? `${s.speed} r/s` : (s.status==='idle'?'—':`${s.speed} r/s`);
+
+  const etaEl = el('eta');
+  if (etaEl) {
+    const rem = s.speed>0 ? Math.ceil((total-s.processed)/s.speed) : null;
+    if (s.status==='running' && rem) etaEl.textContent = rem>=60?`${Math.floor(rem/60)}m${rem%60}s`:`${rem}s`;
+    else if (s.status==='done' && s.startTime) etaEl.textContent = `✓${Math.round((Date.now()-s.startTime)/1000)}s`;
+    else etaEl.textContent = '—';
+  }
+
+  if (el('errWrap')) el('errWrap').classList.toggle('visible', isAdmin);
+  if (el('errtitle')) el('errtitle').textContent = `${s.errors.length} lỗi`;
+
+  if (el('btnSync'))  el('btnSync').disabled  = s.status==='running' || (!dbStatus.source||!dbStatus.dest);
+  if (el('btnReset')) el('btnReset').disabled = s.status==='running' || s.status==='idle';
+
+  // Cập nhật sidebar pill
+  const sPill = document.getElementById(`spill_${safeId}`);
+  if (sPill) {
+    const pm = {idle:'tpill-idle',running:'tpill-running',done:'tpill-done',error:'tpill-error'};
+    const pl = {idle:'IDLE',running:'RUN',done:'DONE',error:'ERR'};
+    sPill.className   = `target-pill-sm ${pm[s.status]||'tpill-idle'}`;
+    sPill.textContent = pl[s.status]||'IDLE';
+  }
+
+  // Cập nhật sidebar folder status
+  if (m.module) {
+    const st = getModuleState(m.module);
+    const folderDot = document.querySelector(`#sidebar_mod_${CSS.escape(m.module)} .mod-folder-status`);
+    if (folderDot) { folderDot.className = `mod-folder-status ${st}`; }
+  }
+
+  updateGlobalStats();
+}
+
+function appendError(moduleId, e, idx) {
+  const safeId = moduleId.replace(/[^a-zA-Z0-9]/g,'_');
+  const list = document.getElementById(`errList_${safeId}`);
+  if (!list || document.getElementById(`retry_${safeId}_${idx}`)) return;
+  const item = document.createElement('div');
+  item.className = 'error-item';
+  item.innerHTML = `
+    <div class="error-body">
+      <div class="error-id">ID: ${e.id_bak}</div>
+      <div class="error-msg">⚠ ${e.msg}</div>
+      <div class="error-detail">Trường: ${e.field} — ${e.detail}</div>
+    </div>
+    <button class="btn-retry" id="retry_${safeId}_${idx}" onclick="retryRecord('${moduleId}',${idx})">Thử lại</button>
+  `;
+  list.appendChild(item);
+  list.scrollTop = list.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  DB CONNECTION
+// ══════════════════════════════════════════════════════════════════════
+async function checkDbConnection() {
+  const sSrc = document.getElementById('dbSourceStatus');
+  const sDst = document.getElementById('dbDestStatus');
+  try {
+    const res  = await fetch('/api/system/health');
+    const data = await res.json();
+    dbStatus.source = data.source;
+    dbStatus.dest   = data.dest;
+    sSrc.innerHTML  = `<span class="dot ${data.source?'':'red'}"></span> Nguồn: ${data.sourceName||'DB'}`;
+    sSrc.className  = `conn-badge ${data.source?'':'error'}`;
+    sDst.innerHTML  = `<span class="dot ${data.dest?'':'red'}"></span> Đích: ${data.destName||'DB'}`;
+    sDst.className  = `conn-badge ${data.dest?'':'error'}`;
+    updateAllButtonsState();
+  } catch {
+    dbStatus.source = false; dbStatus.dest = false;
+    sSrc.innerHTML = `<span class="dot red"></span> Nguồn: Lỗi`; sSrc.className = 'conn-badge error';
+    sDst.innerHTML = `<span class="dot red"></span> Đích: Lỗi`;  sDst.className = 'conn-badge error';
+    updateAllButtonsState();
+  }
+}
+
+function updateAllButtonsState() {
+  const ok = dbStatus.source && dbStatus.dest;
+  modules.forEach(m => {
+    const safeId = m.id.replace(/[^a-zA-Z0-9]/g,'_');
+    const btn = document.getElementById(`btnSync_${safeId}`);
+    const s = state[m.id];
+    if (btn && s) {
+      btn.disabled = !ok || s.status==='running';
+      btn.title    = ok ? '' : 'Chưa kết nối Database';
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  SYNC (chạy 1 target)
+// ══════════════════════════════════════════════════════════════════════
+function startSync(id) {
+  return new Promise((resolve) => {
+    const m = modules.find(x => x.id===id);
+    const s = state[id];
+    if (!m || !s || s.status==='running') { resolve(); return; }
+
+    if (!dbStatus.source || !dbStatus.dest) {
+      alert('Lỗi kết nối: Vui lòng kiểm tra lại Database Nguồn/Đích.');
+      log(`[${label(m)}] Bị chặn: Chưa kết nối Database`, 'err');
+      resolve(); return;
+    }
+
+    s.status='running'; s.processed=0; s.inserted=0; s.updated=0; s.skipped=0; s.errors=[]; s.speed=0; s.startTime=Date.now();
+    const safeId = id.replace(/[^a-zA-Z0-9]/g,'_');
+    const errList = document.getElementById(`errList_${safeId}`);
+    if (errList) errList.innerHTML = '';
+
+    log(`[${label(m)}] Bắt đầu đồng bộ — ${fmt(m.total||0)} bản ghi`, 'info');
+    updateModuleUI(id);
+
+    (async () => {
+      try {
+        const res = await fetch('/api/chuyendoi/start-run', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ file: m.file })
+        });
+        if (!res.ok) {
+          const e = await res.json().catch(()=>({}));
+          throw new Error(e.message || 'Không thể khởi động tiến trình');
+        }
+        const { runId } = await res.json();
+
+        s.intervalId = setInterval(async () => {
+          try {
+            const sj = await fetch(`/api/chuyendoi/run-status?runId=${runId}`).then(r=>r.json());
+            s.processed = sj.processed||0; s.inserted=sj.inserted||0; s.updated=sj.updated||0;
+            s.skipped=sj.skipped||0; s.speed=sj.speed||0; s.errors=sj.errors||[];
+
+            if (sj.status==='done'||sj.status==='failed'||sj.status==='stopped') {
+              clearInterval(s.intervalId);
+              s.status  = sj.status==='done' ? (s.errors.length?'error':'done') : 'error';
+              s.speed   = 0;
+              s.errors.forEach((e,i) => appendError(id, e, i));
+              log(`[${label(m)}] Kết thúc: ${sj.status}. Tổng: ${fmt(s.processed)}`, s.status==='done'?'ok':'err');
+              resolve();
+            }
+            updateModuleUI(id);
+          } catch(pe) { console.error('Polling error:', pe); }
+        }, 1000);
+      } catch(e) {
+        s.status='error';
+        log(`[${label(m)}] Lỗi khởi động: ${e.message}`, 'err');
+        updateModuleUI(id); resolve();
+      }
+    })();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RUN MODULE (SEQUENTIAL theo config.json)
+// ══════════════════════════════════════════════════════════════════════
+async function runModule(modName) {
+  const grp = moduleGroups[modName];
+  if (!grp) return;
+
+  // Targets đã được sắp xếp theo runOrder (thứ tự trong config.json)
+  const targets = grp.targets;
+  const safeId  = modName.replace(/[^a-zA-Z0-9]/g,'_');
+
+  const btn       = document.getElementById(`btnRunMod_${safeId}`);
+  const progWrap  = document.getElementById(`modProgress_${safeId}`);
+  const progLabel = document.getElementById(`modProgLabel_${safeId}`);
+  const progPct   = document.getElementById(`modProgPct_${safeId}`);
+  const progBar   = document.getElementById(`modProgBar_${safeId}`);
+
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang chạy...'; }
+  if (progWrap) progWrap.style.display = 'block';
+
+  log(`[Module ${modName}] Bắt đầu chạy chuỗi ${targets.length} targets (theo config.json)...`, 'info');
+
+  for (let i = 0; i < targets.length; i++) {
+    const t = targets[i];
+    const pct = Math.round(i / targets.length * 100);
+
+    if (progLabel) progLabel.textContent = `Đang chạy ${i+1}/${targets.length}: ${label(t)}`;
+    if (progPct)   progPct.textContent   = `${pct}%`;
+    if (progBar)   progBar.style.width   = pct + '%';
+
+    // Cuộn tới card
+    const card = document.getElementById(`card_${CSS.escape(t.id)}`);
+    if (card) card.scrollIntoView({ behavior:'smooth', block:'center' });
+
+    await startSync(t.id);
+  }
+
+  if (progLabel) progLabel.textContent = `✓ Hoàn thành tất cả ${targets.length} targets`;
+  if (progPct)   progPct.textContent   = '100%';
+  if (progBar)   progBar.style.width   = '100%';
+
+  log(`[Module ${modName}] Hoàn thành toàn bộ chuỗi.`, 'ok');
+  if (btn) { btn.disabled = false; btn.innerHTML = '▶ Chạy Module'; }
+
+  // Ẩn progress bar sau 4s
+  setTimeout(() => { if (progWrap) progWrap.style.display = 'none'; }, 4000);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RESET TARGET
+// ══════════════════════════════════════════════════════════════════════
+function resetTarget(id) {
+  const m = modules.find(x=>x.id===id);
+  const s = state[id];
+  if (!s) return;
+  if (s.intervalId) clearInterval(s.intervalId);
+  state[id] = { status:'idle', processed:0, inserted:0, updated:0, skipped:0, errors:[], speed:0, startTime:null, intervalId:null };
+  const safeId = id.replace(/[^a-zA-Z0-9]/g,'_');
+  const errList = document.getElementById(`errList_${safeId}`);
+  if (errList) errList.innerHTML='';
+  log(`[${label(m)}] Đặt lại trạng thái.`);
+  updateModuleUI(id);
+}
+
+async function retryRecord(moduleId, errIdx) {
+  const s   = state[moduleId];
+  const e   = s?.errors[errIdx];
+  const safeId = moduleId.replace(/[^a-zA-Z0-9]/g,'_');
+  const btn = document.getElementById(`retry_${safeId}_${errIdx}`);
+  if (!btn || !e) return;
+  btn.disabled=true; btn.textContent='...';
+  await new Promise(r=>setTimeout(r,600+Math.random()*400));
+  if (Math.random()>0.3) {
+    e.retried=true; btn.className='btn-retry ok'; btn.textContent='✓ OK';
+    log(`Retry ID ${e.id_bak}: thành công`, 'ok');
+  } else {
+    btn.disabled=false; btn.textContent='Thử lại';
+    log(`Retry ID ${e.id_bak}: thất bại`, 'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  VIEW CONFIG MODULE
+// ══════════════════════════════════════════════════════════════════════
+function viewModuleConfig(modName) {
+  const grp = moduleGroups[modName];
+  // Cấu trúc config.json thực tế được ghi vào D:\DataSync\config\targets\Module\{modName}\config.json
+  const config = {
+    module:        modName,
+    description:   grp.config?.description || `Đồng bộ module ${modName}`,
+    runSequential: true,
+    path:          `D:\\DataSync\\config\\targets\\Module\\${modName}\\`,
+    targets: (grp?.targets || []).map((t, i) => ({
+      order:    i + 1,
+      file:     `Module\\${modName}\\${t.fileName}`,   // đúng chuẩn: Module\{mod}\{file}
+      winPath:  t.winPath,
+      notes:    t.displayName,
+      nguon:    { table: t.route.split('→')[0]?.trim() },
+      dich:     { table: t.route.split('→')[1]?.trim() }
+    }))
+  };
+  document.getElementById('configModalTitle').textContent = `📋 Module\\${modName}\\config.json`;
+  document.getElementById('configJsonView').innerHTML = syntaxHighlight(config);
+  openModal('modalViewConfig');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  VIEW LOG
+// ══════════════════════════════════════════════════════════════════════
+async function viewHistory(id) {
+  const m = modules.find(x=>x.id===id);
+  document.getElementById('logModal').style.display = 'flex';
+  document.getElementById('logModalTitle').textContent = `📜 Log: ${label(m)}`;
+  document.getElementById('logModalBody').innerHTML = `
+    <div style="text-align:center;padding:40px;color:var(--muted);">
+      <span class="spin" style="width:20px;height:20px;border-width:3px;"></span>
+      <div style="margin-top:10px;font-size:12px;">Đang đọc file log...</div>
+    </div>`;
+  document.getElementById('rawJsonArea').style.display = 'none';
+
+  let data;
+  try {
+    const res = await fetch(`/api/chuyendoi/history-log?file=${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error('Không tìm thấy file log');
+    data = await res.json();
+  } catch {
+    data = {
+      meta: { file: id, note: 'Dữ liệu mẫu' },
+      processed:1500, inserted:1200, updated:280, skipped:15,
+      errors: [
+        { id_bak:1001, msg:'FK Constraint Violation', detail:'DepartmentId=99 không tồn tại', field:'DepartmentId' },
+        { id_bak:1042, msg:'Data Truncation', detail:'Address vượt 100 ký tự', field:'Address' },
+        { id_bak:1150, msg:'Duplicate Key', detail:'Vi phạm Unique Key tại Email', field:'Email' },
+      ]
+    };
+  }
+
+  const errors = data.errors || [];
+  let html = `
+    <div class="log-summary">
+      <div class="log-stat-box"><div class="log-stat-val">${fmt(data.processed||0)}</div><div class="log-stat-lbl">Tổng xử lý</div></div>
+      <div class="log-stat-box"><div class="log-stat-val" style="color:var(--green)">${fmt(data.inserted||0)}</div><div class="log-stat-lbl">Thêm mới</div></div>
+      <div class="log-stat-box"><div class="log-stat-val" style="color:var(--accent)">${fmt(data.updated||0)}</div><div class="log-stat-lbl">Cập nhật</div></div>
+      <div class="log-stat-box"><div class="log-stat-val" style="color:var(--red)">${fmt(errors.length)}</div><div class="log-stat-lbl">Lỗi</div></div>
+    </div>`;
+  if (errors.length) {
+    html += `<div class="section-title" style="color:var(--red)">Danh sách lỗi (${errors.length})</div>
+      <div style="border:1px solid var(--border2);border-radius:8px;overflow:hidden;max-height:220px;overflow-y:auto;">
+        <table class="log-table">
+          <thead><tr><th>ID Gốc</th><th>Lỗi</th><th>Chi tiết</th></tr></thead>
+          <tbody>${errors.map(e=>`<tr><td><span class="badge-err">${e.id_bak}</span></td><td style="color:#fca5a5">${e.msg}</td><td style="color:var(--muted);font-size:11px">${e.detail}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>`;
+  } else {
+    html += `<div style="text-align:center;padding:20px;color:var(--green);background:rgba(52,211,153,.05);border-radius:8px;">✓ Không có lỗi.</div>`;
+  }
+  document.getElementById('logModalBody').innerHTML = html;
+  document.getElementById('rawJsonArea').textContent = JSON.stringify(data,null,2);
+  document.getElementById('rawJsonArea').className = 'raw-json';
+}
+
+function toggleRawJson() {
+  const el = document.getElementById('rawJsonArea');
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  CREATE MODULE
+// ══════════════════════════════════════════════════════════════════════
+async function saveNewModule() {
+  const name = document.getElementById('newModuleName').value.trim();
+  const desc = document.getElementById('newModuleDesc').value.trim();
+  if (!name) { alert('Vui lòng nhập tên Module'); return; }
+
+  const btn = document.getElementById('btnSaveModule');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang tạo...';
+
+  try {
+    const res = await fetch('/api/chuyendoi/tao-module', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ moduleName: name, description: desc })
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.message || 'Lỗi tạo module');
+    }
+
+    log(`Đã tạo module '${name}' với file config.json`, 'ok');
+    closeModal('modalCreateModule');
+    await loadModules();
+
+    // Chọn luôn module vừa tạo
+    selectModule(name);
+
+    // Hỏi có muốn thêm target không
+    setTimeout(() => {
+      if (confirm(`Module "${name}" đã được tạo!\n\nBạn có muốn thêm Target đầu tiên vào module này không?`)) {
+        openCreateTargetModal(name);
+      }
+    }, 300);
+  } catch(e) {
+    alert('Lỗi: ' + e.message);
+    log('Lỗi tạo module: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '📁 Tạo Module';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  CREATE TARGET
+// ══════════════════════════════════════════════════════════════════════
+async function saveNewTarget() {
+  const modName     = document.getElementById('targetModule').value.trim();
+  const fileName    = document.getElementById('targetFileName').value.trim();
+  const sourceTable = document.getElementById('targetSourceTable').value.trim();
+  const destTable   = document.getElementById('targetDestTable').value.trim();
+
+  if (!modName)     { alert('Vui lòng chọn Module'); return; }
+  if (!fileName)    { alert('Vui lòng nhập tên file target'); return; }
+  if (!sourceTable) { alert('Vui lòng nhập bảng nguồn'); return; }
+  if (!destTable)   { alert('Vui lòng nhập bảng đích'); return; }
+
+  // Đảm bảo tên file có đuôi .json
+  const safeFile = fileName.toLowerCase().endsWith('.json') ? fileName : `${fileName}.json`;
+
+  const btn = document.getElementById('btnSaveTarget');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang tạo...';
+
+  try {
+    const res = await fetch('/api/chuyendoi/tao-target', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        moduleName:   modName,
+        fileName:     safeFile, // Chỉ cần gửi tên file, backend tự ghép đường dẫn
+        sourceTable,
+        destTable
+        // Backend sẽ: tạo file JSON + tự động append vào config.json của module
+      })
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(()=>({ message:`Lỗi server: ${res.status}` }));
+      throw new Error(e.message);
+    }
+    const result = await res.json();
+    log(`Tạo target '${safeFile}' thành công trong module '${modName}'`, 'ok');
+    closeModal('modalCreateTarget');
+    await loadModules();
+    if (modName) selectModule(modName);
+  } catch(e) {
+    alert('Không thể tạo target: ' + e.message);
+    log('Lỗi tạo target: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '+ Tạo Target';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  loadModules();
+  checkDbConnection();
+  setInterval(checkDbConnection, 30000); // Re-check mỗi 30s
+});
+</script>
+</body>
+</html>

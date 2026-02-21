@@ -1,0 +1,8 @@
+config.json
+{
+  "module": "vanbanden",
+  "path": "D:\\DataSync\\config\\targets\\Module\\vanbanden\\",
+  "targets": [
+    { "order": 1, "file": "Module\\vanbanden\\nguoidung.json" },
+  ]
+}

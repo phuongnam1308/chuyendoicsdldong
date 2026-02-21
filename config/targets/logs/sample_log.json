@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "file": "nguoidung.json",
+    "createdAt": "2023-10-27T14:30:00.000Z",
+    "note": "Log mẫu giả lập lỗi"
+  },
+  "processed": 1500,
+  "inserted": 1200,
+  "updated": 280,
+  "skipped": 15,
+  "errors": [
+    {
+      "id_bak": 1001,
+      "msg": "FK Constraint Violation",
+      "detail": "Không tìm thấy DepartmentId = 99 trong bảng tham chiếu",
+      "field": "DepartmentId"
+    },
+    {
+      "id_bak": 1042,
+      "msg": "Data Truncation",
+      "detail": "Dữ liệu quá dài cho cột Address (max 100 ký tự)",
+      "field": "Address"
+    },
+    {
+      "id_bak": 1150,
+      "msg": "Duplicate Key",
+      "detail": "Vi phạm ràng buộc duy nhất (Unique Key) tại cột Email",
+      "field": "Email"
+    },
+    {
+      "id_bak": 1205,
+      "msg": "Type Mismatch",
+      "detail": "Không thể chuyển đổi giá trị 'Unknown' sang kiểu Int",
+      "field": "Age"
+    },
+    {
+      "id_bak": 1300,
+      "msg": "Validation Error",
+      "detail": "Số điện thoại không đúng định dạng",
+      "field": "Phone"
+    }
+  ]
+}

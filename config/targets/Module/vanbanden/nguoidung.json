@@ -1,0 +1,13 @@
+{
+  "nguon": { "schema": "dbo", "table": "NGUOIDUNG" },
+  "dich": { "schema": "dbo", "table": "NGUOIDUNG_DST" },
+  "mapping": [
+    { "nguon": "UserId", "dich": "id_bak", "type": "int" },
+    { "nguon": "FullName", "dich": "ho_ten", "type": "nvarchar", "rule": { "type": "trim" } },
+    { "nguon": "RoleText", "dich": "role_id", "type": "int", "rule": { "type": "map", "mapName": "roleMap", "default": 2 } },
+    { "nguon": "IsActive", "dich": "is_active", "type": "bit", "rule": { "type": "toBool", "default": false } },
+    { "nguon": "ScoreText", "dich": "score", "type": "float", "rule": { "type": "toFloat", "default": 0 } }
+  ],
+  "options": { "batchSize": 500, "testLimit": 0 },
+  "notes": "File mẫu cho bảng người dùng; chỉnh mapping theo cột thật"
+}

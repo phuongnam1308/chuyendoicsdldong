@@ -1,0 +1,16 @@
+{
+  "nguon": {
+    "table": "abc.nhanvien"
+  },
+  "dich": {
+    "table": "xyz.employye"
+  },
+  "mapping": [],
+  "options": {
+    "batchSize": 500,
+    "logDir": "logs"
+  },
+  "logFile": "logs/history_adafsd_nhanvien.json",
+  "notes": "Target nhanvien.json",
+  "total": 0
+}

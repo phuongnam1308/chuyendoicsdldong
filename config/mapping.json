@@ -1,0 +1,33 @@
+{
+  "nguon": {
+    "server": "TEN_SERVER_NGUON",
+    "user": "sa",
+    "password": "matkhau",
+    "database": "DB_NGUON"
+  },
+  "dich": {
+    "server": "TEN_SERVER_DICH",
+    "user": "sa",
+    "password": "matkhau",
+    "database": "DB_DICH"
+  },
+  "mapping": [
+    { "nguon": "Id", "dich": "id_bak", "type": "int" },
+    { "nguon": "Name", "dich": "ten", "type": "nvarchar" }
+  ],
+  "options": {
+    "batchSize": 500,
+    "testLimit": 0
+  },
+  "moduleName": "vi_du.chuyendoi",
+  "targets": [
+    {
+      "nguon": { "table": "BangNguon" },
+      "dich": { "table": "BangDich" }
+    },
+    {
+      "nguon": { "table": "BangNguon2" },
+      "dich": { "table": "BangDich2" }
+    }
+  ]
+}
