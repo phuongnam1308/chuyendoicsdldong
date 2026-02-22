@@ -8,11 +8,7 @@
 .env
 .env.*
 
-# Logs
+# Logs and OS files
 npm-debug.log
-logs/
-*.log
-
-# OS files
 .DS_Store
 Thumbs.db

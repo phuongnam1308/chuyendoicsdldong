@@ -233,6 +233,52 @@ export class ChuyenDoiService {
     return { mapping, targetFile: targetPath };
   }
 
+  async saveMapping(data: any) {
+    try {
+      // data: { folder, filename, nguonTable, dichTable, attributes }
+      const folder = data.folder || '';
+      const filename = data.filename.endsWith('.json') ? data.filename : `${data.filename}.json`;
+      
+      const targetDir = path.join(THU_MUC_CAU_HINH, 'targets', folder);
+      
+      // Tạo thư mục nếu chưa tồn tại
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      const filePath = path.join(targetDir, filename);
+      const relativePath = folder ? path.join(folder, filename) : filename;
+
+      // Đọc config cũ nếu có để giữ lại các options khác
+      let existingConfig: any = {};
+      if (fs.existsSync(filePath)) {
+        try { existingConfig = JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch (e) {}
+      }
+
+      const configContent = {
+        ...existingConfig,
+        nguon: { ...existingConfig.nguon, table: data.nguonTable },
+        dich: { ...existingConfig.dich, table: data.dichTable },
+        mapping: data.attributes || [],
+        notes: `Updated via Mapping Tool at ${new Date().toISOString()}`
+      };
+
+      fs.writeFileSync(filePath, JSON.stringify(configContent, null, 2), 'utf8');
+
+      return { success: true, message: `Đã lưu file: ${relativePath}`, path: filePath, relativePath: relativePath.replace(/\\/g, '/') };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  async getTargetDetail(relativePath: string) {
+    const targetsDir = path.join(THU_MUC_CAU_HINH, 'targets');
+    const filePath = path.join(targetsDir, relativePath);
+    if (!fs.existsSync(filePath)) throw new Error('File không tồn tại: ' + relativePath);
+    const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return { ...content, relativePath };
+  }
+
   /**
    * Trả về trạng thái kết nối của cấu hình chung và từng target (nếu có)
    */

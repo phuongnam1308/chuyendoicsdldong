@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ tạo Mapping DataSync</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 1100px; margin: 0 auto; background-color: #f4f6f9; }
+        h1 { color: #333; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .group-title { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; color: #555; }
+        
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; color: #444; }
+        input, select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        input:focus { border-color: #007bff; outline: none; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #f8f9fa; text-align: left; padding: 10px; border: 1px solid #dee2e6; font-size: 13px; }
+        td { border: 1px solid #dee2e6; padding: 5px; }
+        td input, td select { margin-bottom: 0; border: 1px solid transparent; }
+        td input:hover, td select:hover { border: 1px solid #eee; }
+        td input:focus, td select:focus { border: 1px solid #007bff; }
+
+        .btn { cursor: pointer; padding: 10px 20px; border: none; border-radius: 4px; font-weight: bold; transition: background 0.2s; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { background: #dc3545; color: white; padding: 5px 10px; font-size: 12px; }
+        .btn-secondary { background: #6c757d; color: white; }
+
+        .row-inputs { display: flex; gap: 20px; }
+        .row-inputs > div { flex: 1; }
+        
+        #syncSection { display: none; margin-top: 20px; padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; color: #155724; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <h1>🛠️ Cấu Hình Mapping</h1>
+
+    <div class="card">
+        <h3 class="group-title">1. Cấu hình File & Đường dẫn</h3>
+        <div class="row-inputs">
+            <div>
+                <label>Thư mục con (VD: Module/adafsd)</label>
+                <input type="text" id="folderPath" placeholder="Module/ten_module">
+            </div>
+            <div>
+                <label>Tên File (VD: nhanvien)</label>
+                <input type="text" id="fileName" placeholder="nhanvien">
+            </div>
+        </div>
+        <div class="row-inputs">
+            <div>
+                <label>Bảng Nguồn (SQL Source)</label>
+                <input type="text" id="nguonTable" placeholder="dbo.TEN_BANG_NGUON">
+            </div>
+            <div>
+                <label>Bảng Đích (SQL Destination)</label>
+                <input type="text" id="dichTable" placeholder="dbo.TEN_BANG_DICH">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 class="group-title">2. Mapping Thuộc Tính</h3>
+        <table id="mappingTable">
+            <thead>
+                <tr>
+                    <th style="width: 25%">Cột Nguồn</th>
+                    <th style="width: 25%">Cột Đích</th>
+                    <th style="width: 15%">Kiểu (Type)</th>
+                    <th style="width: 30%">Rule / Giá trị mặc định (JSON)</th>
+                    <th style="width: 50px; text-align: center;">Xóa</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows added via JS -->
+            </tbody>
+        </table>
+        <div style="margin-top: 15px;">
+            <button type="button" class="btn btn-secondary" onclick="addRow()">+ Thêm dòng</button>
+        </div>
+    </div>
+
+    <div class="card" style="text-align: right;">
+        <span id="statusMsg" style="margin-right: 10px; font-weight: bold;"></span>
+        <button type="button" class="btn btn-primary" onclick="saveMapping()">💾 Lưu Cấu Hình</button>
+    </div>
+
+    <div id="syncSection">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>✅ Đã lưu thành công! Bạn có muốn chạy đồng bộ ngay không?</span>
+            <button type="button" class="btn btn-success" onclick="runSync()">🚀 Chạy Đồng Bộ Ngay</button>
+        </div>
+    </div>
+
+    <script>
+        window.onload = async () => { //NOSONAR
+            const params = new URLSearchParams(window.location.search);
+            const file = params.get('file');
+            if (file) {
+                document.title = `Sửa - ${file}`;
+                await loadTargetConfig(file);
+            } else {
+                document.title = 'Tạo Mapping Mới';
+                document.querySelector('h1').innerHTML = `✨ Tạo Cấu Hình Mapping Mới`;
+                addRow(); // Add first row if new
+            }
+        };
+
+        function addRow() {
+            const tbody = document.querySelector('#mappingTable tbody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" class="col-nguon" placeholder="CotNguon"></td>
+                <td><input type="text" class="col-dich" placeholder="CotDich"></td>
+                <td>
+                    <select class="col-type">
+                        <option value="">(Auto)</option>
+                        <option value="int">Int</option>
+                        <option value="nvarchar">String</option>
+                        <option value="date">Date</option>
+                        <option value="bool">Boolean</option>
+                    </select>
+                </td>
+                <td><input type="text" class="col-rule" placeholder='{"default": 0}'></td>
+                <td><button type="button" class="btn btn-danger" onclick="this.closest('tr').remove()">X</button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        async function loadTargetConfig(file) {
+            try {
+                const res = await fetch(`/api/chuyendoi/target-detail?file=${encodeURIComponent(file)}`);
+                if (!res.ok) throw new Error('Không thể tải file cấu hình');
+                const data = await res.json();
+
+                // Tách folder và filename từ đường dẫn file (VD: Module/abc/xyz.json)
+                // data.relativePath trả về từ server
+                const parts = (data.relativePath || file).replace(/\\/g, '/').split('/');
+                const fileNameWithExt = parts.pop();
+                const folder = parts.join('/');
+                const fileName = fileNameWithExt.replace('.json', '');
+
+                // Cập nhật tiêu đề trang
+                document.querySelector('h1').innerHTML = `🛠️ Sửa Cấu Hình: <span style="color: #818cf8;">${fileName}</span>`;
+
+                document.getElementById('folderPath').value = folder;
+                document.getElementById('fileName').value = fileName;
+                document.getElementById('nguonTable').value = data.nguon?.table || '';
+                document.getElementById('dichTable').value = data.dich?.table || '';
+
+                // Clear bảng cũ
+                const tbody = document.querySelector('#mappingTable tbody');
+                tbody.innerHTML = '';
+
+                // Fill mapping
+                if (data.mapping && Array.isArray(data.mapping)) {
+                    data.mapping.forEach(m => {
+                        const tr = document.createElement('tr');
+                        let ruleStr = '';
+                        if (m.rule) {
+                            // Nếu rule là object phức tạp thì stringify, nếu đơn giản thì hiển thị
+                            ruleStr = JSON.stringify(m.rule);
+                        }
+                        
+                        tr.innerHTML = `
+                            <td><input type="text" class="col-nguon" value="${m.nguon || ''}"></td>
+                            <td><input type="text" class="col-dich" value="${m.dich || ''}"></td>
+                            <td>
+                                <select class="col-type">
+                                    <option value="" ${!m.type?'selected':''}> (Auto) </option>
+                                    <option value="int" ${m.type==='int'?'selected':''}>Int</option>
+                                    <option value="nvarchar" ${m.type==='nvarchar'?'selected':''}>String</option>
+                                    <option value="date" ${m.type==='date'?'selected':''}>Date</option>
+                                    <option value="bool" ${m.type==='bool'?'selected':''}>Boolean</option>
+                                </select>
+                            </td>
+                            <td><input type="text" class="col-rule" value='${ruleStr}'></td>
+                            <td><button type="button" class="btn btn-danger" onclick="this.closest('tr').remove()">X</button></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+                
+                document.getElementById('statusMsg').innerText = `Đã tải cấu hình: ${fileName}`;
+            } catch (e) {
+                alert('Lỗi tải cấu hình: ' + e.message);
+            }
+        }
+
+        async function saveMapping() {
+            const folder = document.getElementById('folderPath').value.trim();
+            const filename = document.getElementById('fileName').value.trim();
+            const nguonTable = document.getElementById('nguonTable').value.trim();
+            const dichTable = document.getElementById('dichTable').value.trim();
+
+            if (!filename || !nguonTable || !dichTable) {
+                alert("Vui lòng nhập đủ: Tên file, Bảng nguồn, Bảng đích");
+                return;
+            }
+
+            const attributes = [];
+            document.querySelectorAll('#mappingTable tbody tr').forEach(row => {
+                const nguon = row.querySelector('.col-nguon').value.trim();
+                const dich = row.querySelector('.col-dich').value.trim();
+                const type = row.querySelector('.col-type').value;
+                const ruleStr = row.querySelector('.col-rule').value.trim();
+
+                if (nguon && dich) {
+                    let item = { nguon, dich };
+                    if (type) item.type = type;
+                    if (ruleStr) {
+                        try {
+                            item.rule = JSON.parse(ruleStr);
+                        } catch (e) {
+                            // Nếu không phải JSON, coi như là giá trị default string
+                            item.rule = { default: ruleStr };
+                        }
+                    }
+                    attributes.push(item);
+                }
+            });
+
+            const payload = { folder, filename, nguonTable, dichTable, attributes };
+
+            try {
+                const res = await fetch('/api/chuyendoi/save-mapping', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                const msg = document.getElementById('statusMsg');
+                if (data.success) {
+                    msg.style.color = 'green';
+                    msg.innerText = data.message;
+                    document.getElementById('syncSection').style.display = 'block';
+                    // Lưu đường dẫn file để dùng cho nút sync
+                    window.savedFilePath = data.relativePath; 
+                } else {
+                    msg.style.color = 'red';
+                    msg.innerText = 'Lỗi: ' + data.message;
+                }
+            } catch (err) {
+                alert('Lỗi kết nối: ' + err);
+            }
+        }
+
+        async function runSync() {
+            if (!window.savedFilePath) return;
+            // Gọi API start-run đã có sẵn trong controller
+            const res = await fetch('/api/chuyendoi/start-run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file: window.savedFilePath })
+            });
+            const data = await res.json();
+            if(data.runId) {
+                alert(`Đã bắt đầu đồng bộ! Run ID: ${data.runId}`);
+                // Có thể chuyển hướng về trang dashboard chính để xem tiến độ
+                window.location.href = '/index.html'; 
+            } else {
+                alert('Không thể khởi chạy: ' + (data.message || 'Lỗi không xác định'));
+            }
+        }
+    </script>
+</body>
+</html>

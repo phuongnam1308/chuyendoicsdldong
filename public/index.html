@@ -220,6 +220,7 @@
     .module-card:hover { border-color: rgba(56,189,248,0.2); }
     .module-card.is-running { border-color: rgba(56,189,248,0.4); box-shadow: 0 0 20px rgba(56,189,248,0.08); }
     .module-card.is-done    { border-color: rgba(52,211,153,0.3); }
+    .module-card.is-mapping { border-color: rgba(129,140,248,0.5); box-shadow: 0 0 20px rgba(129,140,248,0.1); }
     .module-card.is-error   { border-color: rgba(248,113,113,0.3); }
 
     .module-head {
@@ -474,6 +475,7 @@
       <div class="conn-badge" id="dbDestStatus"><span class="dot red"></span> Đích: ...</div>
       <div class="admin-badge" id="adminToggle" onclick="toggleAdmin()">🔒 Admin</div>
       <button class="btn btn-ghost" onclick="openCreateModuleModal()">📁 Tạo Module</button>
+      <a href="/api/chuyendoi/mapping-tool" target="_blank" class="btn btn-ghost" style="text-decoration:none; color:var(--muted);">🛠️ Tool Mapping</a>
       <button class="btn btn-primary" onclick="openCreateTargetModal()">+ Thêm Target</button>
     </div>
   </header>
@@ -1134,6 +1136,7 @@ function buildTargetCard(m, idx) {
       <div class="module-footer">
         <button class="btn btn-primary btn-sm" id="btnSync_${safeId}" onclick="startSync('${m.id}')" ${(!dbStatus.source||!dbStatus.dest)?'disabled':''}>▶ Chạy</button>
         <button class="btn btn-ghost btn-sm"   id="btnReset_${safeId}" onclick="resetTarget('${m.id}')" disabled>↺ Reset</button>
+        <button class="btn btn-ghost btn-sm"   onclick="openMappingTool('${m.id}')">🛠️ Map</button>
         <button class="btn btn-ghost btn-sm"   onclick="viewHistory('${m.id}')">📜 Log</button>
       </div>
     </div>
@@ -1410,6 +1413,19 @@ async function retryRecord(moduleId, errIdx) {
     btn.disabled=false; btn.textContent='Thử lại';
     log(`Retry ID ${e.id_bak}: thất bại`, 'err');
   }
+}
+
+function openMappingTool(id) {
+  // Xóa highlight khỏi các card khác
+  document.querySelectorAll('.module-card.is-mapping').forEach(card => {
+    card.classList.remove('is-mapping');
+  });
+  // Highlight card hiện tại
+  const card = document.getElementById(`card_${CSS.escape(id)}`);
+  if (card) {
+    card.classList.add('is-mapping');
+  }
+  window.open(`/api/chuyendoi/mapping-tool?file=${encodeURIComponent(id)}`, '_blank');
 }
 
 // ══════════════════════════════════════════════════════════════════════

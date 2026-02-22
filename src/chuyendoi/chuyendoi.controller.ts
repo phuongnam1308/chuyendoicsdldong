@@ -227,6 +227,32 @@ export class ChuyenDoiController {
     return this.cs.retryError(body.runId, body.id_bak);
   }
 
+  @ApiOperation({ summary: 'Lưu cấu hình mapping chi tiết từ giao diện Mapping Tool' })
+  @Post('save-mapping')
+  async saveMapping(@Body() body: any) {
+    return this.cs.saveMapping(body);
+  }
+
+  @ApiOperation({ summary: 'Lấy chi tiết cấu hình target để chỉnh sửa' })
+  @Get('target-detail')
+  async getTargetDetail(@Query('file') file: string) {
+    if (!file) throw new Error('Thiếu tham số file');
+    return this.cs.getTargetDetail(file);
+  }
+
+  @ApiOperation({ summary: 'Trang công cụ mapping chi tiết (HTML)' })
+  @Get('mapping-tool')
+  @Header('Content-Type', 'text/html')
+  async mappingToolHtml() {
+    try {
+      const p = path.resolve(__dirname, '../../public/mapping-tool.html');
+      if (fs.existsSync(p)) {
+        return fs.readFileSync(p, 'utf8');
+      }
+    } catch (e) {}
+    return `<!doctype html><html><body><h1>Không tìm thấy public/mapping-tool.html</h1></body></html>`;
+  }
+
   @ApiOperation({ summary: 'Trang index hiển thị UI (HTML/CSS/JS) — trả về file public/index.html' })
   @Get('index')
   @Header('Content-Type', 'text/html')
